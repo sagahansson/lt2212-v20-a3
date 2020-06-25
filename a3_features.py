@@ -3,6 +3,13 @@ import sys
 import argparse
 import numpy as np
 import pandas as pd
+import glob
+from nltk.tokenize import word_tokenize
+import pprint
+from nltk.corpus import stopwords
+from sklearn.feature_extraction.text import TfidfVectorizer
+import pandas as pd
+
 # Whatever other imports you need
 
 if __name__ == "__main__":
@@ -24,4 +31,11 @@ if __name__ == "__main__":
     # Write the table out here.
 
     print("Done!")
+    
+    enron = glob.glob("{}/*".format(args.inputdir))
+    authors = [os.path.basename(author) for author in enron] # behöver ej?
+    texts = [glob.glob("{}/*".format(author)) for author in enron]
+    files = [text for authorlist in texts for text in authorlist]
+    
+    
     
