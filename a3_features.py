@@ -54,10 +54,10 @@ if __name__ == "__main__":
     
     def create_df(fit_transformed, filenames, authors_in_order, testsize): #inputdir, dims, testsize, outputfile
         # create dataframe
-        #fit_transformed, filenames, authors_in_order = reduce_dims(inputdir, dims)
+        #fit_transformed, filenames, authors_in_order = reduce_dims(inputdir, dims) # old function call don't need it
             
         df = pd.DataFrame(data=fit_transformed)
-        df.insert(0, "Filename", filenames)
+        #df.insert(0, "Filename", filenames) #don't need it eh
         df.insert(0, "Author", authors_in_order)
         
         test = df.sample(frac=(testsize/100)) 
