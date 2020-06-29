@@ -37,24 +37,45 @@ def sampling(batchsize, df):
     
     
 class NN(nn.Module):
-    def __init__(self, inS, hiS, noL  )
+    def __init__(self, inS  ) # hiS, noL
 # ins = input size, hs = hidden size, noL = non linearity
         super().__init__()
-        if noL != None:
-            if noL == 'relu':
-                self.noL = nn.ReLU()
-            else: #if it's 'tanh'
-                self.noL = nn.Tanh()
-        if hidden_size != None:      
-            self.l1 = nn.Linear(input_size, hidden_size)
-            self.l2 = nn.Linear(hidden_size, 1)
-        else:
-            self.l1 = nn.Linear(input_size, 1)
-        self.sigmoid = nn.Sigmoid()    
+        self.l = nn.Linear(inS, 1)
+        self.sigmoid = nn.Sigmoid()
+      #  if noL != None:
+      #      if noL == 'relu':
+      #          self.noL = nn.ReLU()
+      #      else: #if it's 'tanh'
+      #          self.noL = nn.Tanh()
+      #  else:
+      #      self.noL = None
+      #  if hidden_size != None:      
+      #      self.l1 = nn.Linear(input_size, hidden_size)
+      #      self.l2 = nn.Linear(hidden_size, 1)
+      #  else:
+      #      self.l = nn.Linear(input_size, 1)
+      #  self.sigmoid = nn.Sigmoid()    
     
     def forward(self, x):
-        if self.hiS != None:
-            
+      #  if self.hiS != None:
+      #      x = self.l(x)
+      #  else:
+      #      if self.noL != None:
+      #          x = self.l1(x)
+      #          x = self.noL(x)
+      #          x = self.l2(x)
+        x = self.l(x)
+        x = self.sigmoid(x)
+        return x
+    
+    def training(epochs, iterations, batchsize, df):
+        net = NN()
+        for epoch in range(epochs):
+            for iteration in range(iterations):
+                samples = sampling(batchsize, df)
+                tensor = [x[0] for x in samples]
+                label = [x[1] for x in samples]
+                
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train and test a model on features.")
@@ -70,8 +91,17 @@ if __name__ == "__main__":
     #parser.add_argument("--non_linearity", "-NL", dest=AS, type=str, default=None, choices=['relu', 'tanh'], help="Choice of either ReLU or Tanh".)
     
     # number of iterations is a function of batchsize and train examples: for 160 train examples and batchsize 10: 160/10 = 16 iterations to get through all the training data.  
-    
     args = parser.parse_args()
+    inputsize = df.shape[1]-2 # INPUT SIZE TO NN != batchsize    
+    
+    B = args.B
+    E = args.E
+    TrEx = args.TrEx
+    TeEx = args.TeEx
+    
+    iterations = TrEx//B
+    
+    
 
     print("Reading {}...".format(args.featurefile))
 
@@ -82,7 +112,7 @@ if __name__ == "__main__":
     
     print("Done reading.")
     
-    inputsize = df.shape[1]-2 # INPUT SIZE TO NN != batchsize
+    
     
     sampling(1, train_df)
     
