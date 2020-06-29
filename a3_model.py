@@ -17,13 +17,16 @@ def sampling(batchsize, df):
         #make batches i e if batchsize is 5 => put 5 examples. each example (vector1, vector2, 0/1 (depending on wether or not vecto1 and 2 are by the same author)
         authors = df.Author.unique().tolist() #get unique authors
         first_author = authors.pop(random.randrange(0,len(authors))) # skaffa en random author
-        t_f = random.choice([0, 1] # 0 = not from same author, 1 same author
+        t_f = random.choice([0, 1]) # 0 = not from same author, 1 same author
         if t_f == 1:
-            second_author = first author
+            second_author = first_author
         else: # if binary is 0 
             second_author = authors.pop(random.randrange(0,len(authors))) # skaffa en annan random author
 
-        
+        author1_tensor = torch.from_numpy(df[df["Author"].values == first_author].sample(n=1).drop(["Train/Test", "Author"], axis=1).values)
+        author2_tensor = torch.from_numpy(df[df["Author"].values == second_author].sample(n=1).drop(["Train/Test", "Author"], axis=1).values)
+    
+    print(first_author, second_author)
         
         
 
