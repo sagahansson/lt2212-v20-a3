@@ -7,6 +7,7 @@ import torch
 from torch import nn, autograd, optim
 import random
 import torch.nn.functional as F
+import sklearn.metrics as metrics
 # Whatever other imports you need
 
 # You can implement classes and helper functions here too.
@@ -39,10 +40,10 @@ def sampling(batchsize, df):
     
     
 class NN(nn.Module):
-    def __init__(self, inS): # hiS, noL
-# inS = input size, hS = hidden size, noL = non linearity
+    def __init__(self, inSize=160): # hidSize, nonLin
+# inS = input size, hidSize = hidden size, nonLin = non linearity
         super().__init__()
-        self.lyr = nn.Linear(inS, 1)
+        self.lyr = nn.Linear(inSize, 1)
         self.sigmoid = nn.Sigmoid()
       #  if noL != None:
       #      if noL == 'relu':
@@ -70,8 +71,9 @@ class NN(nn.Module):
         x = self.sigmoid(x)
         return x
     
-def nn_training(traindf, input_sz=160, epochs=3, iterations=16, batchsize=10, learning_rate=0.001):
-    net = NN(inS=input_sz)
+def nn_training(traindf, input_sz=300, epochs=3, iterations=16, batchsize=10, learning_rate=0.01):
+    print("Training...")
+    net = NN(inSize=input_sz)
     opt = optim.Adam(params=net.parameters(), lr=learning_rate)
     lossfunct = nn.BCELoss()
     for epoch in range(epochs):
@@ -80,27 +82,60 @@ def nn_training(traindf, input_sz=160, epochs=3, iterations=16, batchsize=10, le
 
             tensors = [x[0] for x in samples]
             labels = [x[1] for x in samples]
-
             tensors = autograd.Variable(torch.stack(tensors))
 
             labels = autograd.Variable(torch.tensor(labels))
-            print("tensors/target: ", tensors)
+            #print("tensors/target: ", tensors)
             out = net(tensors)
-            print(out)
+            
+            squeezed = torch.squeeze(out, 1)
+            resqueezed = torch.squeeze(squeezed, 1)
+            
+            #print(out)
 #            _, prediction = out.max(1)
 #            print("prediction: ", prediction)
-            print("target: ", labels)
-            loss = lossfunct(out, labels)
+            #print("target: ", labels)
+            loss = lossfunct(resqueezed, labels)
             opt.zero_grad()
             loss.backward()
-            print("loss: ", loss.data)
+            #print("loss: ", loss.data)
 
             opt.step()
 
     print("Training done.")
 
-def nn_testing(testdf, ):
-    pass
+def nn_testing(testdf, test_sz):
+    samples = sampling(test_sz, testdf)
+    
+    tensors = [x[0] for x in samples]
+    labels = [x[1] for x in samples]
+    
+    tensors = autograd.Variable(torch.stack(tensors))
+    preds = []
+    
+    out = net(tensors)
+
+    squeezed = torch.squeeze(out, 1)
+    resqueezed = torch.squeeze(squeezed, 1)
+
+    for value in out:
+        if value > 0.5:
+            pred = 1
+        else:
+            pred = 0
+        preds.append(pred)
+
+    acc = metrics.accuracy_score(labels, preds)
+    prec = metrics.precision_score(labels, preds, average='weighted')
+    rec = metrics.recall_score(labels, preds, average='weighted')
+    f1 = metrics.f1_score(labels, preds, average='weighted')
+    print('Accuracy: ', acc)
+    print('Precision: ', prec)
+    print('Recall: ', rec)
+    print('F1-measure: ', f1)
+
+    
+    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train and test a model on features.")
     parser.add_argument("featurefile", type=str, help="The file containing the table of instances and features.")
@@ -131,12 +166,31 @@ if __name__ == "__main__":
     TrEx = args.TrEx
     TeEx = args.TeEx
     iterations = TrEx//B
-    inputsize = (df.shape[1]-2) # INPUT SIZE TO NN != batchsize    
+    inputsize = (df.shape[1]-2) # INPUT SIZE TO NN != batchsize # detta är fel -- inputsize måste vara TrEx dvs the number of random pairs the nn will train on    
 
-    net = NN(inS=(inputsize))
+    net = NN(inSize=inputsize)
     optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
     criterion = nn.BCELoss()
         
     
+#    for e in range(args.E):
+#
+#        batch_data = sampling(B, train_df)
+#        loss_acc = 0
+#        for inputs, label in batch_data:
+#            print("inputs: ", inputs)
+#            print("label: ", label)
+#            optimizer.zero_grad()
+#            out = net(inputs)
+#            loss = criterion(out, label)
+#            loss_acc += loss
+#            loss.backward()
+#            optimizer.step()
+#            print("loss: ", loss.data)
+#        if e%50 == 0:
+#            print("EPOCH:", e)
+#            print(loss_acc.item()/len(batch_data))
 
-#    nn_training(train_df)
+    nn_training(train_df, input_sz=inputsize)
+    
+    nn_testing(test_df, TeEx)
