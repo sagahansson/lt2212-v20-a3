@@ -1,3 +1,4 @@
+import warnings
 import os
 import sys
 import argparse
@@ -9,6 +10,7 @@ import random
 import torch.nn.functional as F
 import sklearn.metrics as metrics
 # Whatever other imports you need
+warnings.filterwarnings('ignore')
 
 # You can implement classes and helper functions here too.
 
@@ -40,40 +42,33 @@ def sampling(batchsize, df):
     
     
 class NN(nn.Module):
-    def __init__(self, inSize=160): # hidSize, nonLin
-# inS = input size, hidSize = hidden size, nonLin = non linearity
+    def __init__(self, inSize, hidSize, nonLin): 
         super().__init__()
-        self.lyr = nn.Linear(inSize, 1)
+        self.hidsize = hidSize
+        self.nonlin = nonLin
+        if self.hidsize: # or put if self.hidsize is not None:
+            self.l = nn.Linear(inSize, hidSize)
+            if self.nonlin: 
+                if self.nonlin == "relu":
+                    self.nonlin = nn.ReLU()
+                else:
+                    self.nonlin = nn.Tanh()
+            self.l2 = nn.Linear(hidSize, 1)
+        else:
+            self.l = nn.Linear(inSize, 1)
         self.sigmoid = nn.Sigmoid()
-      #  if noL != None:
-      #      if noL == 'relu':
-      #          self.noL = nn.ReLU()
-      #      else: #if it's 'tanh'
-      #          self.noL = nn.Tanh()
-      #  else:
-      #      self.noL = None
-      #  if hidden_size != None:      
-      #      self.l1 = nn.Linear(input_size, hidden_size)
-      #      self.l2 = nn.Linear(hidden_size, 1)
-      #  else:
-      #      self.l = nn.Linear(input_size, 1)
-      #  self.sigmoid = nn.Sigmoid()    
-    
+
     def forward(self, x):
-      #  if self.hiS != None:
-      #      x = self.l(x)
-      #  else:
-      #      if self.noL != None:
-      #          x = self.l1(x)
-      #          x = self.noL(x)
-      #          x = self.l2(x)
-        x = self.lyr(x)
+        x = self.l(x)
+        if self.nonlin:
+            x = self.nonlin(x)
+        if self.hidsize:
+            x = self.l2(x)
         x = self.sigmoid(x)
         return x
     
-def nn_training(traindf, input_sz=300, epochs=3, iterations=16, batchsize=10, learning_rate=0.01):
+def nn_training(traindf, epochs, iterations, batchsize, learning_rate=0.01):
     print("Training...")
-    net = NN(inSize=input_sz)
     opt = optim.Adam(params=net.parameters(), lr=learning_rate)
     lossfunct = nn.BCELoss()
     for epoch in range(epochs):
@@ -146,8 +141,8 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", "-E", dest="E", type=int, default=3, help="The number of epochs.")
     parser.add_argument("--train_examples", "-TrEx", dest="TrEx", type=int, default=160, help="The number of random pairs + label the NN will train on.")
     parser.add_argument("--test_examples", "-TeEx", dest="TeEx", type=int, default=40, help="The number of random pairs the NN will test on.")
-    #parser.add_argument("--hidden_size", "-HS", dest=HS, type=int, default=None, help="The size of the hidden layer.")
-    #parser.add_argument("--non_linearity", "-NL", dest=AS, type=str, default=None, choices=['relu', 'tanh'], help="Choice of either ReLU or Tanh".)
+    parser.add_argument("--hidden_size", "-HS", dest="HS", type=int, default=None, help="The size of the hidden layer.")
+    parser.add_argument("--non_linearity", "-NL", dest="NL", type=str, default=None, choices=['relu', 'tanh'], help="Choice of either ReLU or Tanh.")
     
     # number of iterations is a function of batchsize and train examples: for 160 train examples and batchsize 10: 160/10 = 16 iterations to get through all the training data.  
     args = parser.parse_args()
@@ -161,36 +156,20 @@ if __name__ == "__main__":
     
     
     
-    B = args.B
-    E = args.E
-    TrEx = args.TrEx
-    TeEx = args.TeEx
-    iterations = TrEx//B
-    inputsize = (df.shape[1]-2) # INPUT SIZE TO NN != batchsize # detta är fel -- inputsize måste vara TrEx dvs the number of random pairs the nn will train on    
-
-    net = NN(inSize=inputsize)
-    optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
-    criterion = nn.BCELoss()
-        
+    batchsize = args.B
+    epochs = args.E
+    TrainEx = args.TrEx
+    TestEx = args.TeEx
+    iterations = TrainEx//batchsize
+    inputsize = (df.shape[1]-2) # INPUT SIZE TO NN != batchsize # bredden på df
+    hidsize = args.HS 
+    NonLin = args.NL
     
-#    for e in range(args.E):
-#
-#        batch_data = sampling(B, train_df)
-#        loss_acc = 0
-#        for inputs, label in batch_data:
-#            print("inputs: ", inputs)
-#            print("label: ", label)
-#            optimizer.zero_grad()
-#            out = net(inputs)
-#            loss = criterion(out, label)
-#            loss_acc += loss
-#            loss.backward()
-#            optimizer.step()
-#            print("loss: ", loss.data)
-#        if e%50 == 0:
-#            print("EPOCH:", e)
-#            print(loss_acc.item()/len(batch_data))
 
-    nn_training(train_df, input_sz=inputsize)
+    net = NN(inputsize, hidsize, NonLin)
+#    optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
+#    criterion = nn.BCELoss()
+
+    nn_training(train_df, epochs, iterations, batchsize)
     
-    nn_testing(test_df, TeEx)
+    nn_testing(test_df, TestEx)
