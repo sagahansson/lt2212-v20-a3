@@ -12,7 +12,6 @@ import sklearn.metrics as metrics
 # Whatever other imports you need
 warnings.filterwarnings('ignore')
 
-# You can implement classes and helper functions here too.
 
 def sampling(batchsize, df):
     
@@ -21,7 +20,7 @@ def sampling(batchsize, df):
     for i in range(batchsize):
         #make batches i e if batchsize is 5 => put 5 examples. each example (vector1, vector2, 0/1 (depending on wether or not vecto1 and 2 are by the same author)
         authors = df.Author.unique().tolist() #get unique authors
-        first_author = authors.pop(random.randrange(0,len(authors))) # skaffa en random author
+        first_author = authors.pop(random.randrange(0,len(authors))) # get a random author
         t_f = random.choice([0, 1]) # 0 = not from same author, 1 same author
         if t_f == 1: 
             second_author = first_author
@@ -30,8 +29,6 @@ def sampling(batchsize, df):
 
         author1_tensor = torch.FloatTensor(df[df["Author"] == first_author].sample(n=1).drop(["Train/Test", "Author"], axis=1).values) # picking a random row where Author = first_author, dropping the Train/Test and Author columns, converting to a ndarray, then to a tensor
         author2_tensor = torch.FloatTensor(df[df["Author"] == second_author].sample(n=1).drop(["Train/Test", "Author"], axis=1).values)
-    
-        #tensors = torch.cat((author1_tensor, author2_tensor), 0) # concatenating the two author tensors
         
         tensors = autograd.Variable(torch.FloatTensor((author1_tensor + author2_tensor)))
         
@@ -46,16 +43,16 @@ class NN(nn.Module):
         super().__init__()
         self.hidsize = hidSize
         self.nonlin = nonLin
-        if self.hidsize: # or put if self.hidsize is not None:
+        if self.hidsize is not None: 
             self.l = nn.Linear(inSize, hidSize)
-            if self.nonlin: 
-                if self.nonlin == "relu":
-                    self.nonlin = nn.ReLU()
-                else:
-                    self.nonlin = nn.Tanh()
             self.l2 = nn.Linear(hidSize, 1)
         else:
-            self.l = nn.Linear(inSize, 1)
+            self.l = nn.Linear(inSize, 1)    
+        if self.nonlin is not None: 
+            if self.nonlin == "relu":
+                self.nonlin = nn.ReLU()
+            else:
+                self.nonlin = nn.Tanh()
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
@@ -80,21 +77,14 @@ def nn_training(traindf, epochs, iterations, batchsize, learning_rate=0.01):
             tensors = autograd.Variable(torch.stack(tensors))
 
             labels = autograd.Variable(torch.tensor(labels))
-            #print("tensors/target: ", tensors)
             out = net(tensors)
             
             squeezed = torch.squeeze(out, 1)
             resqueezed = torch.squeeze(squeezed, 1)
             
-            #print(out)
-#            _, prediction = out.max(1)
-#            print("prediction: ", prediction)
-            #print("target: ", labels)
             loss = lossfunct(resqueezed, labels)
             opt.zero_grad()
             loss.backward()
-            #print("loss: ", loss.data)
-
             opt.step()
 
     print("Training done.")
@@ -144,7 +134,7 @@ if __name__ == "__main__":
     parser.add_argument("--hidden_size", "-HS", dest="HS", type=int, default=None, help="The size of the hidden layer.")
     parser.add_argument("--non_linearity", "-NL", dest="NL", type=str, default=None, choices=['relu', 'tanh'], help="Choice of either ReLU or Tanh.")
     
-    # number of iterations is a function of batchsize and train examples: for 160 train examples and batchsize 10: 160/10 = 16 iterations to get through all the training data.  
+
     args = parser.parse_args()
     
     print("Reading {}...".format(args.featurefile))
@@ -155,20 +145,17 @@ if __name__ == "__main__":
     print("Done reading.")
     
     
-    
     batchsize = args.B
     epochs = args.E
     TrainEx = args.TrEx
     TestEx = args.TeEx
-    iterations = TrainEx//batchsize
-    inputsize = (df.shape[1]-2) # INPUT SIZE TO NN != batchsize # bredden på df
+    iterations = TrainEx//batchsize # number of iterations is a function of batchsize and train examples: for 160 train examples and batchsize 10: 160/10 = 16 iterations to get through all the training data.  
+    inputsize = (df.shape[1]-2)
     hidsize = args.HS 
     NonLin = args.NL
     
 
     net = NN(inputsize, hidsize, NonLin)
-#    optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
-#    criterion = nn.BCELoss()
 
     nn_training(train_df, epochs, iterations, batchsize)
     
